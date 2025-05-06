@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import Author, Book
 from .serializers import AuthorSerializer, BookSerializer
+from django.core.cache import cache
 
 
 # Fetch all authors and create a new author
@@ -56,6 +57,13 @@ class AuthorDetailView(APIView):
 class BookListView(APIView):
     def get(self, request):
         author_name = request.query_params.get('author_name', None)  # Fetch query parameter 'author_name'
+        
+        cache_key = f'books_{author_name}' if author_name else 'books_all'
+        cached_books = cache.get(cache_key)
+
+        if cached_books:
+            print("Cache Hit:", cached_books)  # Print cached data to the console
+            return Response(cached_books, status=status.HTTP_200_OK)
 
         if author_name:
             # Filter books by the author's name (case-insensitive)
@@ -67,12 +75,14 @@ class BookListView(APIView):
             books = Book.objects.all()
 
         serializer = BookSerializer(books, many=True)
+        cache.set(cache_key, serializer.data) # Cache the result for future requests
         return Response(serializer.data)
     
     def post(self, request):   # Create a new book
         serializer = BookSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
+            cache.clear()  # Clear cache after creating a new book
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
@@ -97,6 +107,7 @@ class BookDetailView(APIView):
         serializer = BookSerializer(book, data=request.data)
         if serializer.is_valid():
             serializer.save()
+            cache.clear() # Clear cache after updating a book
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -107,4 +118,5 @@ class BookDetailView(APIView):
             return Response(status=status.HTTP_404_NOT_FOUND)
 
         book.delete()
+        cache.clear() # Clear cache after deleting a book
         return Response(status=status.HTTP_204_NO_CONTENT)
