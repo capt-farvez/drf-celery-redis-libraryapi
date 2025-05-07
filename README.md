@@ -30,3 +30,27 @@ or
 ```bash 
 pip install -r requirements.txt
 ```
+
+## To Run this project:
+Install Docker Desktop:
+- Download and install Docker Desktop
+- Follow the installation steps and start Docker after installation.
+- Run Redis in Docker
+- Once Docker is running, open a terminal 
+
+- **Terminal 1:**
+```
+docker run --name redis -p 6379:6379 -d redis
+```
+- **Terminal 2:**
+``` 
+celery -A your_project_app_name worker --loglevel=debug
+```
+- **Terminal 3:**
+``` 
+celery -A your_project_app_name beat --loglevel=debug
+```
+- **Terminal 4:**
+``` 
+python manage.py runserver
+```
